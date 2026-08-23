@@ -15,18 +15,19 @@ import {
   UserStatus,
 } from '../../database/entities';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { PasswordHasher } from './services/password-hasher.service';
 import { getJwtPrivateKey, getJwtPublicKey } from './utils/jwt-key.util';
+
+const THIRTY_DAYS_IN_SECONDS = 30 * 24 * 60 * 60;
 
 interface RequestContext {
   userAgent: string | null;
   ipAddress: string | null;
 }
 
-interface TokenPair {
+export interface TokenPair {
   accessToken: string;
   refreshToken: string;
   tokenType: 'Bearer';
@@ -40,14 +41,16 @@ interface PreparedTokenPair {
 
 @Injectable()
 export class AuthService {
-  private readonly accessTtlSeconds = Number(process.env.JWT_ACCESS_TTL_SECONDS ?? 900);
-  private readonly refreshTtlSeconds = Number(process.env.JWT_REFRESH_TTL_SECONDS ?? 604800);
+  private readonly accessTtlSeconds = Number(
+    process.env.JWT_ACCESS_TTL_SECONDS ?? THIRTY_DAYS_IN_SECONDS,
+  );
+  private readonly refreshTtlSeconds = Number(
+    process.env.JWT_REFRESH_TTL_SECONDS ?? THIRTY_DAYS_IN_SECONDS,
+  );
 
   constructor(
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity>,
-    @InjectRepository(UserProfileEntity)
-    private readonly profilesRepository: Repository<UserProfileEntity>,
     @InjectRepository(AuthSessionEntity)
     private readonly sessionsRepository: Repository<AuthSessionEntity>,
     private readonly jwtService: JwtService,
@@ -56,9 +59,8 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto, context: RequestContext): Promise<TokenPair> {
-    const email = dto.email.trim().toLowerCase();
     const user = this.usersRepository.create({
-      email,
+      email: dto.email.trim().toLowerCase(),
       phone: dto.phone ?? null,
       passwordHash: this.passwordHasher.hash(dto.password),
       role: UserRole.USER,
@@ -75,7 +77,6 @@ export class AuthService {
             fullName: dto.fullName.trim(),
           }),
         );
-        prepared.session.userId = user.id;
         await manager.getRepository(AuthSessionEntity).save(prepared.session);
       });
     } catch (error: unknown) {
@@ -92,7 +93,9 @@ export class AuthService {
     const user = await this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
-      .where('LOWER(user.email) = :email', { email: dto.email.trim().toLowerCase() })
+      .where('LOWER(user.email) = :email', {
+        email: dto.email.trim().toLowerCase(),
+      })
       .getOne();
 
     if (!user || !this.passwordHasher.verify(dto.password, user.passwordHash)) {
@@ -107,9 +110,9 @@ export class AuthService {
     return prepared.tokens;
   }
 
-  async refresh(dto: RefreshTokenDto, context: RequestContext): Promise<TokenPair> {
-    const payload = await this.verifyRefreshToken(dto.refreshToken);
-    const tokenHash = this.hashToken(dto.refreshToken);
+  async refresh(refreshToken: string, context: RequestContext): Promise<TokenPair> {
+    const payload = await this.verifyRefreshToken(refreshToken);
+    const tokenHash = this.hashToken(refreshToken);
 
     const currentSession = await this.sessionsRepository
       .createQueryBuilder('session')
@@ -133,16 +136,15 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('Account is not active');
 
     const prepared = await this.prepareTokenPair(user, context);
-
     await this.dataSource.transaction(async (manager) => {
-      const revokeResult = await manager.getRepository(AuthSessionEntity).update(
+      const result = await manager.getRepository(AuthSessionEntity).update(
         { id: currentSession.id, revokedAt: IsNull() },
         {
           revokedAt: new Date(),
           replacedBySessionId: prepared.session.id,
         },
       );
-      if (revokeResult.affected !== 1) {
+      if (result.affected !== 1) {
         throw new UnauthorizedException('Refresh token was already used');
       }
       await manager.getRepository(AuthSessionEntity).save(prepared.session);
@@ -151,20 +153,22 @@ export class AuthService {
     return prepared.tokens;
   }
 
-  async logout(dto: RefreshTokenDto): Promise<void> {
+  async logout(refreshToken: string | undefined): Promise<void> {
+    if (!refreshToken) return;
+
     try {
-      const payload = await this.verifyRefreshToken(dto.refreshToken);
+      const payload = await this.verifyRefreshToken(refreshToken);
       await this.sessionsRepository.update(
         {
           id: payload.jti,
           userId: payload.sub,
-          tokenHash: this.hashToken(dto.refreshToken),
+          tokenHash: this.hashToken(refreshToken),
           revokedAt: IsNull(),
         },
         { revokedAt: new Date() },
       );
     } catch {
-      // Logout is intentionally idempotent.
+      // The cookie is still removed by the controller, making logout idempotent.
     }
   }
 
