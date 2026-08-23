@@ -7,6 +7,7 @@ export * from './chat.entities';
 export * from './subscription.entities';
 export * from './review.entities';
 export * from './misc.entities';
+export * from './auth-session.entity';
 
 import { UserEntity, UserProfileEntity, OwnerProfileEntity } from './user.entities';
 import { FieldEntity, FieldCourtEntity, FieldImageEntity, FieldServiceEntity, FieldPricingEntity } from './field.entities';
@@ -16,6 +17,7 @@ import { ConversationEntity, ConversationMemberEntity, MessageEntity } from './c
 import { SubscriptionPlanEntity, SubscriptionEntity, TransactionEntity } from './subscription.entities';
 import { FieldReviewEntity, UserReviewEntity, FieldRatingSummaryEntity, UserRatingSummaryEntity } from './review.entities';
 import { NotificationEntity, ApprovalRequestEntity, AiUsageLogEntity } from './misc.entities';
+import { AuthSessionEntity } from './auth-session.entity';
 
 export const DATABASE_ENTITIES = [
  UserEntity, UserProfileEntity, OwnerProfileEntity,
@@ -27,5 +29,5 @@ export const DATABASE_ENTITIES = [
  SubscriptionPlanEntity, SubscriptionEntity, TransactionEntity,
  ApprovalRequestEntity,
  FieldReviewEntity, UserReviewEntity, FieldRatingSummaryEntity, UserRatingSummaryEntity,
- AiUsageLogEntity,
+ AiUsageLogEntity, AuthSessionEntity,
 ];
