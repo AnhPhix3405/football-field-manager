@@ -21,8 +21,9 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { CookieOptions, Request, Response } from 'express';
-import { AuthService, TokenPair } from './auth.service';
+import type { CookieOptions, Request, Response } from 'express';
+import { AuthService } from './auth.service';
+import type { TokenPair } from './auth.service';
 import {
   AccessTokenResponseDto,
   ErrorResponseDto,
