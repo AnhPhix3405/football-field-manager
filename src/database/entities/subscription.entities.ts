@@ -13,6 +13,6 @@ import { SubscriptionStatus, TransactionStatus, TransactionType } from './databa
  @PrimaryGeneratedColumn('uuid') id:string; @Index() @Column({name:'user_id',type:'uuid'}) userId:string;
  @Column({type:'enum',enum:TransactionType,enumName:'transaction_type_enum'}) type:TransactionType; @Column({name:'ref_id',type:'uuid',nullable:true}) refId:string|null;
  @Column({type:'decimal',precision:14,scale:2}) amount:string; @Column({type:'enum',enum:TransactionStatus,enumName:'transaction_status_enum',default:TransactionStatus.PENDING}) status:TransactionStatus;
- @Column({nullable:true}) gateway:string|null; @Index({unique:true,where:'gateway_ref IS NOT NULL'}) @Column({name:'gateway_ref',nullable:true}) gatewayRef:string|null;
+ @Column({type:'varchar',nullable:true}) gateway:string|null; @Index({unique:true,where:'gateway_ref IS NOT NULL'}) @Column({name:'gateway_ref',type:'varchar',nullable:true}) gatewayRef:string|null;
  @CreateDateColumn({name:'created_at',type:'timestamptz'}) createdAt:Date;
 }

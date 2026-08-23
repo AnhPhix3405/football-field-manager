@@ -20,7 +20,7 @@ import { CourtStatus, DayType, DepositType, FieldStatus } from './database.enums
 }
 @Entity('field_services') export class FieldServiceEntity {
  @PrimaryGeneratedColumn('uuid') id:string; @Index() @Column({name:'field_id',type:'uuid'}) fieldId:string; @Column() name:string;
- @Column({type:'decimal',precision:14,scale:2,default:0}) price:string; @Column({nullable:true}) unit:string|null;
+ @Column({type:'decimal',precision:14,scale:2,default:0}) price:string; @Column({type:'varchar',nullable:true}) unit:string|null;
 }
 @Entity('field_pricing') export class FieldPricingEntity {
  @PrimaryGeneratedColumn('uuid') id:string; @Index() @Column({name:'field_id',type:'uuid'}) fieldId:string;
