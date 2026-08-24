@@ -4,12 +4,15 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiCreatedResponse,
+  ApiConflictResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -40,6 +43,25 @@ import {
 @Controller('conversations')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
+
+  @Post('fields/:fieldId')
+  @ApiOperation({
+    summary: 'Create or reuse a direct conversation with a field owner',
+  })
+  @ApiParam({ name: 'fieldId', format: 'uuid' })
+  @ApiCreatedResponse({ type: ConversationResponseDto })
+  @ApiForbiddenResponse({
+    description: 'The authenticated user owns the field.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiNotFoundResponse({ type: ApiErrorResponseDto })
+  @ApiConflictResponse({ type: ApiErrorResponseDto })
+  createFieldConversation(
+    @Param('fieldId', ParseUUIDPipe) fieldId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<ConversationResponseDto> {
+    return this.chatService.createFieldConversation(fieldId, user.id);
+  }
 
   @Get()
   @ApiOperation({ summary: 'List the authenticated user conversations' })

@@ -20,6 +20,19 @@ const socket = io('http://localhost:3000/chat', {
 On authentication failure, the server emits `auth:error` and disconnects the
 socket.
 
+## Starting a field-owner conversation
+
+Create or reuse the direct conversation through REST first:
+
+```http
+POST /api/v1/conversations/fields/:fieldId
+Authorization: Bearer <access-token>
+```
+
+The response contains the `conversationId` and both member IDs. The client can
+then emit `conversation:join` with that ID. No separate gateway or event set is
+used for field-owner chat.
+
 ## Client events
 
 ### `conversation:join`

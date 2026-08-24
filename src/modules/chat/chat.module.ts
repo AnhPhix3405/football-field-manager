@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import {
   ConversationEntity,
   ConversationMemberEntity,
+  FieldEntity,
   MessageEntity,
   UserEntity,
 } from '../../database/entities';
@@ -18,6 +19,7 @@ import { ChatService } from './chat.service';
       ConversationEntity,
       ConversationMemberEntity,
       MessageEntity,
+      FieldEntity,
       UserEntity,
     ]),
     JwtModule.register({}),
