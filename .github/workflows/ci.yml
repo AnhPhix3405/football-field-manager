@@ -1,0 +1,47 @@
+name: Continuous Integration (CI)
+
+# Bật CI mỗi khi có Code Push hoặc Pull Request vào nhánh develop hoặc main
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Pull code về máy ảo của GitHub
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Cài đặt pnpm trên máy ảo
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8 # Hoặc version pnpm bạn đang dùng dưới máy local
+
+      # 3. Cài đặt Node.js + Bật Cache pnpm (Để các lần sau chạy siêu nhanh)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      # 4. Cài đặt dependencies
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 5. Chạy Kiểm tra Lỗi Syntax / Formatting (Nếu có script lint)
+      - name: Run Linter
+        run: pnpm run lint
+        continue-on-error: true # Đổi thành false nếu muốn bắt buộc phải sạch lint mới cho qua
+
+      # 6. Chạy Build thử dự án (Tương đương kiểm tra compile NestJS/TypeScript)
+      - name: Build Project
+        run: pnpm run build
+
+      # 7. (Tùy chọn) Chạy Unit Test nếu dự án có viết test
+      # - name: Run Tests
+      #   run: pnpm run test
