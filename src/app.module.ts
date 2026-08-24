@@ -4,7 +4,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { databaseConfig } from './config/database.config';
 import { AuthModule } from './modules/auth/auth.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { FieldsModule } from './modules/fields/fields.module';
 import { MatchesModule } from './modules/matches/matches.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ProfilesModule } from './modules/users/profiles.module';
@@ -17,6 +19,8 @@ import { ProfilesModule } from './modules/users/profiles.module';
     PostsModule,
     MatchesModule,
     ChatModule,
+    FieldsModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
