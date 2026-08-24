@@ -15,6 +15,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -104,6 +105,10 @@ export class PostsController {
   @ApiOkResponse({ type: PostResponseDto })
   @ApiBadRequestResponse({
     description: 'The request body or time range is invalid.',
+    type: ApiErrorResponseDto,
+  })
+  @ApiConflictResponse({
+    description: 'playersNeeded is below the already accepted player count.',
     type: ApiErrorResponseDto,
   })
   @ApiNotFoundResponse({

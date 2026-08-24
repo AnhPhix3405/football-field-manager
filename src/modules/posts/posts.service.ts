@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -43,6 +44,8 @@ export class PostsService {
       startTime: dto.startTime,
       endTime: dto.endTime,
       skillLevelRequired: dto.skillLevelRequired ?? null,
+      playersNeeded: dto.playersNeeded,
+      acceptedPlayers: 0,
       status: PostStatus.OPEN,
     });
 
@@ -156,6 +159,20 @@ export class PostsService {
     if (dto.skillLevelRequired !== undefined) {
       post.skillLevelRequired = dto.skillLevelRequired;
     }
+    if (dto.playersNeeded !== undefined) {
+      if (dto.playersNeeded < post.acceptedPlayers) {
+        throw new ConflictException(
+          'playersNeeded cannot be lower than acceptedPlayers',
+        );
+      }
+      post.playersNeeded = dto.playersNeeded;
+      if (post.status !== PostStatus.CLOSED) {
+        post.status =
+          post.acceptedPlayers >= post.playersNeeded
+            ? PostStatus.MATCHED
+            : PostStatus.OPEN;
+      }
+    }
 
     return PostsService.toResponse(await this.postsRepository.save(post));
   }
@@ -181,6 +198,8 @@ export class PostsService {
       endTime: post.endTime,
       skillLevelRequired: post.skillLevelRequired,
       status: post.status,
+      playersNeeded: post.playersNeeded,
+      acceptedPlayers: post.acceptedPlayers,
       ...(distanceKm === undefined
         ? {}
         : { distanceKm: Number(distanceKm.toFixed(2)) }),

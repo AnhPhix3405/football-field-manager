@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -64,4 +65,17 @@ export class CreatePostDto {
   @IsOptional()
   @IsEnum(SkillLevel)
   skillLevelRequired?: SkillLevel | null;
+
+  @ApiPropertyOptional({
+    description: 'Number of opponents the post owner wants to accept.',
+    example: 1,
+    default: 1,
+    minimum: 1,
+    maximum: 50,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  playersNeeded = 1;
 }

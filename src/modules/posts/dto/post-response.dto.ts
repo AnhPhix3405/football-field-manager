@@ -38,6 +38,12 @@ export class PostResponseDto {
   @ApiProperty({ enum: PostStatus })
   status: PostStatus;
 
+  @ApiProperty({ example: 2 })
+  playersNeeded: number;
+
+  @ApiProperty({ example: 1 })
+  acceptedPlayers: number;
+
   @ApiPropertyOptional({
     description: 'Distance from the selected search center in kilometers.',
     example: 3.42,
