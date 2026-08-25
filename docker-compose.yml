@@ -1,18 +1,67 @@
-version: '3.8'
-
 services:
+  football-manager:
+    container_name: football-manager
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: dev
+
+    working_dir: /app
+
+    volumes:
+      - ./:/app
+      - /app/node_modules
+
+    ports:
+      - '3000:3000'
+
+    env_file:
+      - .env
+
+    environment:
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: admin
+      DB_PASSWORD: 123456
+      DB_DATABASE: football_db
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - football-network
+
+    restart: unless-stopped
+
+    command: pnpm run start:dev
+
   postgres:
     image: postgres:16.15-alpine3.23
     container_name: football-postgres
     restart: always
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: "123456"
+      POSTGRES_PASSWORD: '123456'
       POSTGRES_DB: football_db
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U admin -d football_db']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - football-network
+
+networks:
+  football-network:
+    driver: bridge
 
 volumes:
   postgres_data:

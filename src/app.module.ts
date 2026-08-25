@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
+import { I18nModule } from 'nestjs-i18n';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { databaseConfig } from './config/database.config';
@@ -15,6 +17,16 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 @Module({
   imports: [
     TypeOrmModule.forRoot(databaseConfig),
+    I18nModule.forRoot({
+      fallbackLanguage: 'vi',
+      fallbacks: {
+        'en-*': 'en',
+      },
+      loaderOptions: {
+        path: join(__dirname, 'i18n'),
+        watch: process.env.NODE_ENV !== 'production',
+      },
+    }),
     AuthModule,
     ProfilesModule,
     PostsModule,
