@@ -1,29 +1,54 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import {
-  BookingEntity,
+  FieldBlockedSlotEntity,
   FieldCourtEntity,
   FieldEntity,
   FieldImageEntity,
   FieldPricingEntity,
   FieldServiceEntity,
-} from '../../database/entities';
+} from './entities/field.entity';
+import { BookingsPersistenceModule } from '../bookings/bookings-persistence.module';
 import { FieldsController } from './fields.controller';
 import { FieldsService } from './fields.service';
+import {
+  FieldBlockedSlotRepository,
+  FieldCourtRepository,
+  FieldImageRepository,
+  FieldPricingRepository,
+  FieldRepository,
+  FieldServiceRepository,
+} from './repositories';
 
 @Module({
   imports: [
+    BookingsPersistenceModule,
     TypeOrmModule.forFeature([
       FieldEntity,
+      FieldBlockedSlotEntity,
       FieldCourtEntity,
       FieldImageEntity,
       FieldServiceEntity,
       FieldPricingEntity,
-      BookingEntity,
     ]),
   ],
   controllers: [FieldsController],
-  providers: [FieldsService],
-  exports: [FieldsService],
+  providers: [
+    FieldsService,
+    FieldBlockedSlotRepository,
+    FieldRepository,
+    FieldCourtRepository,
+    FieldImageRepository,
+    FieldServiceRepository,
+    FieldPricingRepository,
+  ],
+  exports: [
+    FieldsService,
+    FieldBlockedSlotRepository,
+    FieldRepository,
+    FieldCourtRepository,
+    FieldServiceRepository,
+    FieldPricingRepository,
+  ],
 })
 export class FieldsModule {}

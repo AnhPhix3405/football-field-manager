@@ -11,7 +11,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { MessageType } from '../../../database/entities';
+import { MessageType } from '../../entity-registry';
 
 export class ConversationEventDto {
   @ApiProperty({ format: 'uuid' })

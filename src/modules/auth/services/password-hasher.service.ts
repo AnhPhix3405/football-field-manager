@@ -17,6 +17,8 @@ export class PasswordHasher {
 
     const expected = Buffer.from(encodedHash, 'hex');
     const actual = scryptSync(password, salt, expected.length);
-    return expected.length === actual.length && timingSafeEqual(expected, actual);
+    return (
+      expected.length === actual.length && timingSafeEqual(expected, actual)
+    );
   }
 }

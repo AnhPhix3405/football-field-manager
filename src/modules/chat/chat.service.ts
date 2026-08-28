@@ -5,22 +5,21 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, LessThan, Not, Repository } from 'typeorm';
+import { DataSource, In, IsNull, LessThan, Not, Repository } from 'typeorm';
 import {
-  ConversationEntity,
-  ConversationMemberEntity,
   ConversationType,
   FieldEntity,
   FieldStatus,
-  MessageEntity,
   UserEntity,
   UserStatus,
-} from '../../database/entities';
-import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
+} from '../entity-registry';
 import {
-  MessageHistoryQueryDto,
-  SendMessageDto,
-} from './dto/chat.dto';
+  ConversationEntity,
+  ConversationMemberEntity,
+  MessageEntity,
+} from './entities';
+import type { AuthenticatedUser } from '../auth/interfaces/jwt-payload.interface';
+import { MessageHistoryQueryDto, SendMessageDto } from './dto/chat.dto';
 import {
   ConversationResponseDto,
   MessageResponseDto,
@@ -45,61 +44,68 @@ export class ChatService {
     fieldId: string,
     userId: string,
   ): Promise<ConversationResponseDto> {
-    const conversationId = await this.dataSource.transaction(async (manager) => {
-      await manager.query(
-        'SELECT pg_advisory_xact_lock(hashtext($1))',
-        [`field-chat:${fieldId}:${userId}`],
-      );
-      const field = await manager.getRepository(FieldEntity).findOne({
-        where: { id: fieldId, status: FieldStatus.ACTIVE },
-      });
-      if (!field) throw new NotFoundException('Field not found');
-      if (field.ownerId === userId) {
-        throw new ForbiddenException('You cannot start a conversation with yourself');
-      }
-
-      const candidates = await manager.getRepository(ConversationEntity).find({
-        where: { relatedFieldId: fieldId },
-      });
-      if (candidates.length > 0) {
-        const candidateIds = candidates.map((conversation) => conversation.id);
-        const memberships = await manager
-          .getRepository(ConversationMemberEntity)
-          .find({ where: { conversationId: In(candidateIds) } });
-        const existing = candidates.find((conversation) => {
-          const memberIds = memberships
-            .filter((member) => member.conversationId === conversation.id)
-            .map((member) => member.userId);
-          return (
-            memberIds.length === 2 &&
-            memberIds.includes(userId) &&
-            memberIds.includes(field.ownerId)
-          );
+    const conversationId = await this.dataSource.transaction(
+      async (manager) => {
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          `field-chat:${fieldId}:${userId}`,
+        ]);
+        const field = await manager.getRepository(FieldEntity).findOne({
+          where: { id: fieldId, status: FieldStatus.ACTIVE },
         });
-        if (existing) return existing.id;
-      }
+        if (!field) throw new NotFoundException('Field not found');
+        if (field.ownerId === userId) {
+          throw new ForbiddenException(
+            'You cannot start a conversation with yourself',
+          );
+        }
 
-      const conversation = await manager.getRepository(ConversationEntity).save(
-        manager.getRepository(ConversationEntity).create({
-          type: ConversationType.DIRECT,
-          relatedPostId: null,
-          relatedFieldId: field.id,
-          deletedBySender: null,
-          deletedByReceiver: null,
-        }),
-      );
-      await manager.getRepository(ConversationMemberEntity).save([
-        manager.getRepository(ConversationMemberEntity).create({
-          conversationId: conversation.id,
-          userId,
-        }),
-        manager.getRepository(ConversationMemberEntity).create({
-          conversationId: conversation.id,
-          userId: field.ownerId,
-        }),
-      ]);
-      return conversation.id;
-    });
+        const candidates = await manager
+          .getRepository(ConversationEntity)
+          .find({
+            where: { relatedFieldId: fieldId },
+          });
+        if (candidates.length > 0) {
+          const candidateIds = candidates.map(
+            (conversation) => conversation.id,
+          );
+          const memberships = await manager
+            .getRepository(ConversationMemberEntity)
+            .find({ where: { conversationId: In(candidateIds) } });
+          const existing = candidates.find((conversation) => {
+            const memberIds = memberships
+              .filter((member) => member.conversationId === conversation.id)
+              .map((member) => member.userId);
+            return (
+              memberIds.length === 2 &&
+              memberIds.includes(userId) &&
+              memberIds.includes(field.ownerId)
+            );
+          });
+          if (existing) return existing.id;
+        }
+
+        const conversation = await manager
+          .getRepository(ConversationEntity)
+          .save(
+            manager.getRepository(ConversationEntity).create({
+              type: ConversationType.DIRECT,
+              relatedPostId: null,
+              relatedFieldId: field.id,
+            }),
+          );
+        await manager.getRepository(ConversationMemberEntity).save([
+          manager.getRepository(ConversationMemberEntity).create({
+            conversationId: conversation.id,
+            userId,
+          }),
+          manager.getRepository(ConversationMemberEntity).create({
+            conversationId: conversation.id,
+            userId: field.ownerId,
+          }),
+        ]);
+        return conversation.id;
+      },
+    );
 
     const conversation = await this.conversationsRepository.findOne({
       where: { id: conversationId },
@@ -118,15 +124,13 @@ export class ChatService {
 
   async getConversationIds(userId: string): Promise<string[]> {
     const memberships = await this.membersRepository.find({
-      where: { userId },
+      where: { userId, deletedAt: IsNull() },
       select: { conversationId: true },
     });
     return memberships.map((membership) => membership.conversationId);
   }
 
-  async listConversations(
-    userId: string,
-  ): Promise<ConversationResponseDto[]> {
+  async listConversations(userId: string): Promise<ConversationResponseDto[]> {
     const conversationIds = await this.getConversationIds(userId);
     if (conversationIds.length === 0) return [];
 
@@ -152,7 +156,9 @@ export class ChatService {
           relatedPostId: conversation.relatedPostId,
           relatedFieldId: conversation.relatedFieldId,
           memberIds: memberships
-            .filter((membership) => membership.conversationId === conversation.id)
+            .filter(
+              (membership) => membership.conversationId === conversation.id,
+            )
             .map((membership) => membership.userId),
           lastMessage: lastMessage ? this.toMessageResponse(lastMessage) : null,
           createdAt: conversation.createdAt,
@@ -195,11 +201,8 @@ export class ChatService {
       senderId: userId,
       content,
       messageType: dto.messageType,
-      isRead: false,
     });
-    return this.toMessageResponse(
-      await this.messagesRepository.save(message),
-    );
+    return this.toMessageResponse(await this.messagesRepository.save(message));
   }
 
   async markRead(
@@ -207,17 +210,29 @@ export class ChatService {
     userId: string,
   ): Promise<ReadReceiptResponseDto> {
     await this.assertMember(conversationId, userId);
-    const result = await this.messagesRepository.update(
-      {
-        conversationId,
-        senderId: Not(userId),
-        isRead: false,
-      },
-      { isRead: true },
+    const membership = await this.membersRepository.findOne({
+      where: { conversationId, userId, deletedAt: IsNull() },
+    });
+    if (!membership)
+      throw new ForbiddenException('You are not a conversation member');
+
+    const unreadQuery = this.messagesRepository
+      .createQueryBuilder('message')
+      .where('message.conversationId = :conversationId', { conversationId })
+      .andWhere('message.senderId != :userId', { userId });
+    if (membership.lastReadAt) {
+      unreadQuery.andWhere('message.createdAt > :lastReadAt', {
+        lastReadAt: membership.lastReadAt,
+      });
+    }
+    const updatedMessages = await unreadQuery.getCount();
+    await this.membersRepository.update(
+      { conversationId, userId },
+      { lastReadAt: new Date(), deletedAt: null },
     );
     return {
       conversationId,
-      updatedMessages: result.affected ?? 0,
+      updatedMessages,
     };
   }
 
@@ -227,7 +242,7 @@ export class ChatService {
         where: { id: conversationId },
       }),
       this.membersRepository.findOne({
-        where: { conversationId, userId },
+        where: { conversationId, userId, deletedAt: IsNull() },
       }),
     ]);
     if (!conversation) throw new NotFoundException('Conversation not found');
@@ -266,7 +281,6 @@ export class ChatService {
       senderId: message.senderId,
       content: message.content,
       messageType: message.messageType,
-      isRead: message.isRead,
       createdAt: message.createdAt,
       updatedAt: message.updatedAt,
     };

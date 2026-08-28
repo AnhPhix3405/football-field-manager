@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn } from 'class-validator';
-import { MatchStatus } from '../../../database/entities';
+import { MatchStatus } from '../../entity-registry';
 
 const ALLOWED_DECISIONS = [MatchStatus.ACCEPTED, MatchStatus.REJECTED];
 

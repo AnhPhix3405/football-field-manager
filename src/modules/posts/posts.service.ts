@@ -4,13 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import {
-  PostEntity,
-  PostStatus,
-  UserEntity,
-} from '../../database/entities';
+import { PostStatus } from '../../constants/enums/database.enums';
+import { UserRepository } from '../users/repositories';
 import { CreatePostDto } from './dto/create-post.dto';
 import {
   PaginatedPostsResponseDto,
@@ -18,17 +13,15 @@ import {
 } from './dto/post-response.dto';
 import { SearchPostsQueryDto } from './dto/search-posts-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-
-const DEFAULT_RADIUS_KM = 10;
-const EARTH_RADIUS_KM = 6371;
+import { PostEntity } from './entities/post.entity';
+import { PostMatchRepository, PostRepository } from './repositories';
 
 @Injectable()
 export class PostsService {
   constructor(
-    @InjectRepository(PostEntity)
-    private readonly postsRepository: Repository<PostEntity>,
-    @InjectRepository(UserEntity)
-    private readonly usersRepository: Repository<UserEntity>,
+    private readonly postsRepository: PostRepository,
+    private readonly usersRepository: UserRepository,
+    private readonly matchesRepository: PostMatchRepository,
   ) {}
 
   async create(userId: string, dto: CreatePostDto): Promise<PostResponseDto> {
@@ -44,8 +37,7 @@ export class PostsService {
       startTime: dto.startTime,
       endTime: dto.endTime,
       skillLevelRequired: dto.skillLevelRequired ?? null,
-      playersNeeded: dto.playersNeeded,
-      acceptedPlayers: 0,
+      maxPlayers: dto.maxPlayers,
       status: PostStatus.OPEN,
     });
 
@@ -68,69 +60,12 @@ export class PostsService {
       query,
     );
 
-    const queryBuilder = this.postsRepository
-      .createQueryBuilder('post')
-      .where('post.status = :status', { status: PostStatus.OPEN })
-      .andWhere('post.userId != :currentUserId', { currentUserId })
-      .andWhere('post.playDate >= CURRENT_DATE');
-
-    if (query.playDateFrom) {
-      queryBuilder.andWhere('post.playDate >= :playDateFrom', {
-        playDateFrom: query.playDateFrom,
-      });
-    }
-    if (query.playDateTo) {
-      queryBuilder.andWhere('post.playDate <= :playDateTo', {
-        playDateTo: query.playDateTo,
-      });
-    }
-    if (query.startTimeFrom) {
-      queryBuilder.andWhere('post.startTime >= :startTimeFrom', {
-        startTimeFrom: query.startTimeFrom,
-      });
-    }
-    if (query.endTimeTo) {
-      queryBuilder.andWhere('post.endTime <= :endTimeTo', {
-        endTimeTo: query.endTimeTo,
-      });
-    }
-    if (query.skillLevel) {
-      queryBuilder.andWhere('post.skillLevelRequired = :skillLevel', {
-        skillLevel: query.skillLevel,
-      });
-    }
-
-    if (coordinates) {
-      const distanceSql = this.distanceSql();
-      queryBuilder
-        .addSelect(distanceSql, 'distance_km')
-        .andWhere(`${distanceSql} <= :radiusKm`)
-        .setParameters({
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
-          radiusKm: query.radiusKm ?? DEFAULT_RADIUS_KM,
-        })
-        .orderBy('distance_km', 'ASC');
-    }
-
-    queryBuilder
-      .addOrderBy('post.playDate', 'ASC')
-      .addOrderBy('post.startTime', 'ASC');
-
-    const total = await queryBuilder.getCount();
-    const { entities, raw } = await queryBuilder
-      .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getRawAndEntities();
+    const { entities, distances, total } =
+      await this.postsRepository.searchOpen(currentUserId, query, coordinates);
 
     return {
       items: entities.map((post, index) =>
-        PostsService.toResponse(
-          post,
-          raw[index]?.distance_km === undefined
-            ? undefined
-            : Number(raw[index].distance_km),
-        ),
+        PostsService.toResponse(post, distances[index]),
       ),
       total,
       page: query.page,
@@ -147,6 +82,9 @@ export class PostsService {
     const post = await this.findOwnedPost(id, userId);
     const startTime = dto.startTime ?? post.startTime;
     const endTime = dto.endTime ?? post.endTime;
+    if (endTime === null) {
+      throw new BadRequestException('endTime is required for an editable post');
+    }
     this.validateTimeRange(startTime, endTime);
 
     if (dto.title !== undefined) post.title = dto.title.trim();
@@ -159,16 +97,18 @@ export class PostsService {
     if (dto.skillLevelRequired !== undefined) {
       post.skillLevelRequired = dto.skillLevelRequired;
     }
-    if (dto.playersNeeded !== undefined) {
-      if (dto.playersNeeded < post.acceptedPlayers) {
+    if (dto.maxPlayers !== undefined) {
+      const acceptedPlayers =
+        await this.matchesRepository.countAcceptedByPostId(post.id);
+      if (dto.maxPlayers < acceptedPlayers) {
         throw new ConflictException(
-          'playersNeeded cannot be lower than acceptedPlayers',
+          'maxPlayers cannot be lower than the accepted application count',
         );
       }
-      post.playersNeeded = dto.playersNeeded;
+      post.maxPlayers = dto.maxPlayers;
       if (post.status !== PostStatus.CLOSED) {
         post.status =
-          post.acceptedPlayers >= post.playersNeeded
+          acceptedPlayers >= post.maxPlayers
             ? PostStatus.MATCHED
             : PostStatus.OPEN;
       }
@@ -182,24 +122,20 @@ export class PostsService {
     await this.postsRepository.softRemove(post);
   }
 
-  static toResponse(
-    post: PostEntity,
-    distanceKm?: number,
-  ): PostResponseDto {
+  static toResponse(post: PostEntity, distanceKm?: number): PostResponseDto {
     return {
       id: post.id,
       userId: post.userId,
       title: post.title,
       content: post.content,
-      latitude: Number(post.lat),
-      longitude: Number(post.lng),
+      latitude: post.lat === null ? null : Number(post.lat),
+      longitude: post.lng === null ? null : Number(post.lng),
       playDate: post.playDate,
       startTime: post.startTime,
       endTime: post.endTime,
       skillLevelRequired: post.skillLevelRequired,
       status: post.status,
-      playersNeeded: post.playersNeeded,
-      acceptedPlayers: post.acceptedPlayers,
+      maxPlayers: post.maxPlayers,
       ...(distanceKm === undefined
         ? {}
         : { distanceKm: Number(distanceKm.toFixed(2)) }),
@@ -208,13 +144,8 @@ export class PostsService {
     };
   }
 
-  private async findOwnedPost(
-    id: string,
-    userId: string,
-  ): Promise<PostEntity> {
-    const post = await this.postsRepository.findOne({
-      where: { id, userId },
-    });
+  private async findOwnedPost(id: string, userId: string): Promise<PostEntity> {
+    const post = await this.postsRepository.findOwnedById(id, userId);
     if (!post) throw new NotFoundException('Post not found');
     return post;
   }
@@ -239,8 +170,12 @@ export class PostsService {
     }
 
     const user = await this.usersRepository.findOne({ where: { id: userId } });
-    if (user?.lat !== null && user?.lat !== undefined &&
-        user.lng !== null && user.lng !== undefined) {
+    if (
+      user?.lat !== null &&
+      user?.lat !== undefined &&
+      user.lng !== null &&
+      user.lng !== undefined
+    ) {
       return { latitude: Number(user.lat), longitude: Number(user.lng) };
     }
 
@@ -277,14 +212,5 @@ export class PostsService {
     if (startTime >= endTime) {
       throw new BadRequestException('startTime must be earlier than endTime');
     }
-  }
-
-  private distanceSql(): string {
-    return `${EARTH_RADIUS_KM} * 2 * ASIN(SQRT(LEAST(1.0,
-      POWER(SIN(RADIANS(CAST(post.lat AS double precision) - CAST(:latitude AS double precision)) / 2), 2) +
-      COS(RADIANS(CAST(:latitude AS double precision))) *
-      COS(RADIANS(CAST(post.lat AS double precision))) *
-      POWER(SIN(RADIANS(CAST(post.lng AS double precision) - CAST(:longitude AS double precision)) / 2), 2)
-    )))`;
   }
 }

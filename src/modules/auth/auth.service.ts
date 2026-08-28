@@ -13,7 +13,7 @@ import {
   UserProfileEntity,
   UserRole,
   UserStatus,
-} from '../../database/entities';
+} from '../entity-registry';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -58,7 +58,10 @@ export class AuthService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async register(dto: RegisterDto, context: RequestContext): Promise<TokenPair> {
+  async register(
+    dto: RegisterDto,
+    context: RequestContext,
+  ): Promise<TokenPair> {
     const user = this.usersRepository.create({
       email: dto.email.trim().toLowerCase(),
       phone: dto.phone ?? null,
@@ -98,7 +101,11 @@ export class AuthService {
       })
       .getOne();
 
-    if (!user || !this.passwordHasher.verify(dto.password, user.passwordHash)) {
+    if (
+      !user ||
+      !user.passwordHash ||
+      !this.passwordHasher.verify(dto.password, user.passwordHash)
+    ) {
       throw new UnauthorizedException('Invalid credentials');
     }
     if (user.status !== UserStatus.ACTIVE) {
@@ -110,7 +117,10 @@ export class AuthService {
     return prepared.tokens;
   }
 
-  async refresh(refreshToken: string, context: RequestContext): Promise<TokenPair> {
+  async refresh(
+    refreshToken: string,
+    context: RequestContext,
+  ): Promise<TokenPair> {
     const payload = await this.verifyRefreshToken(refreshToken);
     const tokenHash = this.hashToken(refreshToken);
 
@@ -190,7 +200,11 @@ export class AuthService {
         },
       ),
       this.jwtService.signAsync(
-        { ...basePayload, type: 'refresh', jti: refreshJti } satisfies JwtPayload,
+        {
+          ...basePayload,
+          type: 'refresh',
+          jti: refreshJti,
+        } satisfies JwtPayload,
         {
           privateKey: getJwtPrivateKey(),
           algorithm: 'RS256',

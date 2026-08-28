@@ -42,7 +42,9 @@ export class ReviewsController {
   @Post('fields/:bookingId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Review a field after an owned booking is completed' })
+  @ApiOperation({
+    summary: 'Review a field after an owned booking is completed',
+  })
   @ApiParam({ name: 'bookingId', format: 'uuid' })
   @ApiCreatedResponse({ type: FieldReviewCreatedResponseDto })
   @ApiBadRequestResponse({ type: ApiErrorResponseDto })

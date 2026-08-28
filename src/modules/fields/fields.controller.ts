@@ -23,24 +23,34 @@ export class FieldsController {
   constructor(private readonly fieldsService: FieldsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Search active fields by location, price, and services' })
+  @ApiOperation({
+    summary: 'Search active fields by location, price, and services',
+  })
   @ApiOkResponse({ type: PaginatedFieldsResponseDto })
   @ApiBadRequestResponse({ type: ApiErrorResponseDto })
-  search(@Query() query: SearchFieldsQueryDto): Promise<PaginatedFieldsResponseDto> {
+  search(
+    @Query() query: SearchFieldsQueryDto,
+  ): Promise<PaginatedFieldsResponseDto> {
     return this.fieldsService.search(query);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'View field details, courts, services, and pricing' })
+  @ApiOperation({
+    summary: 'View field details, courts, services, and pricing',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: FieldDetailResponseDto })
   @ApiNotFoundResponse({ type: ApiErrorResponseDto })
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<FieldDetailResponseDto> {
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<FieldDetailResponseDto> {
     return this.fieldsService.findOne(id);
   }
 
   @Get(':id/availability')
-  @ApiOperation({ summary: 'Check court availability and occupied slots for a date' })
+  @ApiOperation({
+    summary: 'Check court availability and occupied slots for a date',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: FieldAvailabilityResponseDto })
   @ApiBadRequestResponse({ type: ApiErrorResponseDto })

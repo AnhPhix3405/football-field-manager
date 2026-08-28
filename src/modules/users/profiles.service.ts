@@ -6,16 +6,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import {
-  PostEntity,
-  UserEntity,
-  UserProfileEntity,
-} from '../../database/entities';
 import { PaginatedPostsResponseDto } from '../posts/dto/post-response.dto';
+import { PostEntity } from '../posts/entities/post.entity';
 import { PostsService } from '../posts/posts.service';
 import { PostHistoryQueryDto } from './dto/post-history-query.dto';
 import { ProfileResponseDto } from './dto/profile-response.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UserEntity, UserProfileEntity } from './entities/user.entity';
 
 @Injectable()
 export class ProfilesService {

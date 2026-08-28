@@ -1,12 +1,7 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import {
-  ConversationEntity,
-  ConversationMemberEntity,
-  PostEntity,
-  PostMatchEntity,
-} from '../../database/entities';
 import { AuthModule } from '../auth/auth.module';
+import { ChatModule } from '../chat/chat.module';
+import { PostsModule } from '../posts/posts.module';
 import {
   MatchesController,
   MyApplicationsController,
@@ -14,15 +9,7 @@ import {
 import { MatchesService } from './matches.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      PostEntity,
-      PostMatchEntity,
-      ConversationEntity,
-      ConversationMemberEntity,
-    ]),
-    AuthModule,
-  ],
+  imports: [AuthModule, PostsModule, ChatModule],
   controllers: [MatchesController, MyApplicationsController],
   providers: [MatchesService],
 })

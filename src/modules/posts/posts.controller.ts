@@ -67,7 +67,7 @@ export class PostsController {
   @ApiOperation({
     summary: 'Find opponent posts',
     description:
-      'Finds open future posts by radius, play date, time window, and skill level. The authenticated user\'s own posts are excluded.',
+      "Finds open future posts by radius, play date, time window, and skill level. The authenticated user's own posts are excluded.",
   })
   @ApiOkResponse({ type: PaginatedPostsResponseDto })
   @ApiBadRequestResponse({
@@ -93,9 +93,7 @@ export class PostsController {
     description: 'The post does not exist.',
     type: ApiErrorResponseDto,
   })
-  findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<PostResponseDto> {
+  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<PostResponseDto> {
     return this.postsService.findOne(id);
   }
 
@@ -108,7 +106,7 @@ export class PostsController {
     type: ApiErrorResponseDto,
   })
   @ApiConflictResponse({
-    description: 'playersNeeded is below the already accepted player count.',
+    description: 'maxPlayers is below the already accepted application count.',
     type: ApiErrorResponseDto,
   })
   @ApiNotFoundResponse({

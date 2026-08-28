@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+} from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({
@@ -11,7 +17,8 @@ export class RegisterDto {
   email: string;
 
   @ApiPropertyOptional({
-    description: 'Unique phone number containing 9 to 15 digits; a leading + is allowed.',
+    description:
+      'Unique phone number containing 9 to 15 digits; a leading + is allowed.',
     example: '+84901234567',
     pattern: '^[0-9+]{9,15}$',
   })

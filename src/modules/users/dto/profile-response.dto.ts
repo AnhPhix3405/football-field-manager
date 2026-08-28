@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SkillLevel, UserRole, UserStatus } from '../../../database/entities';
+import { SkillLevel, UserRole, UserStatus } from '../../entity-registry';
 
 export class ProfileResponseDto {
   @ApiProperty({ format: 'uuid' })

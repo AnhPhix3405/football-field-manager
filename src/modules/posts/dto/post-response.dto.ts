@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   PostStatus,
   SkillLevel,
-} from '../../../database/entities';
+} from '../../../constants/enums/database.enums';
 
 export class PostResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -17,11 +17,11 @@ export class PostResponseDto {
   @ApiProperty({ nullable: true })
   content: string | null;
 
-  @ApiProperty({ example: 10.7769 })
-  latitude: number;
+  @ApiPropertyOptional({ example: 10.7769, nullable: true })
+  latitude: number | null;
 
-  @ApiProperty({ example: 106.7009 })
-  longitude: number;
+  @ApiPropertyOptional({ example: 106.7009, nullable: true })
+  longitude: number | null;
 
   @ApiProperty({ format: 'date' })
   playDate: string;
@@ -29,8 +29,8 @@ export class PostResponseDto {
   @ApiProperty({ example: '18:00:00' })
   startTime: string;
 
-  @ApiProperty({ example: '20:00:00' })
-  endTime: string;
+  @ApiPropertyOptional({ example: '20:00:00', nullable: true })
+  endTime: string | null;
 
   @ApiProperty({ enum: SkillLevel, nullable: true })
   skillLevelRequired: SkillLevel | null;
@@ -39,10 +39,7 @@ export class PostResponseDto {
   status: PostStatus;
 
   @ApiProperty({ example: 2 })
-  playersNeeded: number;
-
-  @ApiProperty({ example: 1 })
-  acceptedPlayers: number;
+  maxPlayers: number;
 
   @ApiPropertyOptional({
     description: 'Distance from the selected search center in kilometers.',

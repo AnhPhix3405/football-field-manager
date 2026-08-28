@@ -106,12 +106,7 @@ export class MatchesController {
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: DecideApplicationDto,
   ): Promise<ApplicationDecisionResponseDto> {
-    return this.matchesService.decide(
-      postId,
-      applicationId,
-      user.id,
-      dto,
-    );
+    return this.matchesService.decide(postId, applicationId, user.id, dto);
   }
 }
 

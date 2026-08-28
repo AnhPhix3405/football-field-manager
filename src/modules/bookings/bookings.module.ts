@@ -1,12 +1,20 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { BookingEntity } from '../../database/entities';
 import { AuthModule } from '../auth/auth.module';
+import { FieldsModule } from '../fields/fields.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { BookingsController } from './bookings.controller';
+import { BookingsPersistenceModule } from './bookings-persistence.module';
 import { BookingsService } from './bookings.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([BookingEntity]), AuthModule],
+  imports: [
+    AuthModule,
+    BookingsPersistenceModule,
+    FieldsModule,
+    SubscriptionsModule,
+    NotificationsModule,
+  ],
   controllers: [BookingsController],
   providers: [BookingsService],
   exports: [BookingsService],

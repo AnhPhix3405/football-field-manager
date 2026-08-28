@@ -10,7 +10,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
-import { SkillLevel } from '../../../database/entities';
+import { SkillLevel } from '../../../constants/enums/database.enums';
 
 export class SearchPostsQueryDto {
   @ApiPropertyOptional({
@@ -60,12 +60,18 @@ export class SearchPostsQueryDto {
   @IsDateString()
   playDateTo?: string;
 
-  @ApiPropertyOptional({ example: '17:00', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' })
+  @ApiPropertyOptional({
+    example: '17:00',
+    pattern: '^([01]\\d|2[0-3]):[0-5]\\d$',
+  })
   @IsOptional()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
   startTimeFrom?: string;
 
-  @ApiPropertyOptional({ example: '22:00', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' })
+  @ApiPropertyOptional({
+    example: '22:00',
+    pattern: '^([01]\\d|2[0-3]):[0-5]\\d$',
+  })
   @IsOptional()
   @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
   endTimeTo?: string;

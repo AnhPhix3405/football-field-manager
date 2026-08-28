@@ -11,7 +11,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { SkillLevel } from '../../../database/entities';
+import { SkillLevel } from '../../entity-registry';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({

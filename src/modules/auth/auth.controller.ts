@@ -73,7 +73,10 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AccessTokenResponseDto> {
-    const tokens = await this.authService.register(dto, this.getContext(request));
+    const tokens = await this.authService.register(
+      dto,
+      this.getContext(request),
+    );
     this.setRefreshTokenCookie(response, tokens.refreshToken);
     return this.toAccessTokenResponse(tokens);
   }
@@ -144,7 +147,8 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<AccessTokenResponseDto> {
-    const refreshToken = request.cookies?.[this.cookieName] as string | undefined;
+    const refreshToken = request.cookies?.[this.cookieName] as
+      string | undefined;
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token cookie is missing');
     }
@@ -178,7 +182,8 @@ export class AuthController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ): Promise<void> {
-    const refreshToken = request.cookies?.[this.cookieName] as string | undefined;
+    const refreshToken = request.cookies?.[this.cookieName] as
+      string | undefined;
     await this.authService.logout(refreshToken);
     response.clearCookie(this.cookieName, this.cookieOptions());
   }
@@ -191,13 +196,15 @@ export class AuthController {
     };
   }
 
-  private setRefreshTokenCookie(response: Response, refreshToken: string): void {
+  private setRefreshTokenCookie(
+    response: Response,
+    refreshToken: string,
+  ): void {
     response.cookie(this.cookieName, refreshToken, {
       ...this.cookieOptions(),
       maxAge:
-        Number(
-          process.env.JWT_REFRESH_TTL_SECONDS ?? THIRTY_DAYS_IN_SECONDS,
-        ) * 1000,
+        Number(process.env.JWT_REFRESH_TTL_SECONDS ?? THIRTY_DAYS_IN_SECONDS) *
+        1000,
     });
   }
 

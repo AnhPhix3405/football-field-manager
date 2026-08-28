@@ -13,6 +13,9 @@ import { MatchesModule } from './modules/matches/matches.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { ProfilesModule } from './modules/users/profiles.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { HttpExceptionFilter } from './core/filters/http-exception.filter';
+import { ResponseInterceptor } from './core/interceptors/respone.interceptor';
 
 @Module({
   imports: [
@@ -37,6 +40,16 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     ReviewsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: HttpExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}

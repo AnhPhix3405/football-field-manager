@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MatchStatus } from '../../../database/entities';
+import { MatchStatus } from '../../entity-registry';
 
 export class ApplicationResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -26,8 +26,5 @@ export class ApplicationResponseDto {
 
 export class ApplicationDecisionResponseDto extends ApplicationResponseDto {
   @ApiProperty({ example: 2 })
-  playersNeeded: number;
-
-  @ApiProperty({ example: 1 })
-  acceptedPlayers: number;
+  maxPlayers: number;
 }

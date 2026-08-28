@@ -12,7 +12,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
-import { SkillLevel } from '../../../database/entities';
+import { SkillLevel } from '../../../constants/enums/database.enums';
 
 export class CreatePostDto {
   @ApiProperty({
@@ -67,7 +67,8 @@ export class CreatePostDto {
   skillLevelRequired?: SkillLevel | null;
 
   @ApiPropertyOptional({
-    description: 'Number of opponents the post owner wants to accept.',
+    description:
+      'Maximum number of opponents or players the post owner wants to find.',
     example: 1,
     default: 1,
     minimum: 1,
@@ -77,5 +78,5 @@ export class CreatePostDto {
   @IsInt()
   @Min(1)
   @Max(50)
-  playersNeeded = 1;
+  maxPlayers = 1;
 }

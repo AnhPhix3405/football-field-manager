@@ -1,4 +1,4 @@
-import type { UserRole } from '../../../database/entities';
+import type { UserRole } from '../../entity-registry';
 
 export type TokenType = 'access' | 'refresh';
 

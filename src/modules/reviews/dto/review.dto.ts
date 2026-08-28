@@ -17,7 +17,10 @@ export class CreateReviewDto {
   @Max(5)
   rating: number;
 
-  @ApiPropertyOptional({ example: 'Great field and a fair opponent.', maxLength: 2000 })
+  @ApiPropertyOptional({
+    example: 'Great field and a fair opponent.',
+    maxLength: 2000,
+  })
   @IsOptional()
   @IsString()
   @MaxLength(2000)

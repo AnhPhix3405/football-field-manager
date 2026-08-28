@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { PostStatus } from '../../../database/entities';
+import { PostStatus } from '../../entity-registry';
 
 export class PostHistoryQueryDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })

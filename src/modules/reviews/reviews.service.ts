@@ -7,19 +7,17 @@ import {
 import { DataSource } from 'typeorm';
 import type { EntityManager } from 'typeorm';
 import {
-  BookingEntity,
   BookingStatus,
+  BookingEntity,
   FieldEntity,
-  FieldRatingSummaryEntity,
   FieldReviewEntity,
   MatchStatus,
   PostEntity,
   PostMatchEntity,
   UserEntity,
-  UserRatingSummaryEntity,
   UserReviewEntity,
   UserStatus,
-} from '../../database/entities';
+} from '../entity-registry';
 import { CreateReviewDto, ReviewListQueryDto } from './dto/review.dto';
 import {
   FieldReviewCreatedResponseDto,
@@ -30,10 +28,16 @@ import {
   UserReviewCreatedResponseDto,
   UserReviewResponseDto,
 } from './dto/review-response.dto';
+import { FieldReviewRepository } from './repositories/field-review.repository';
+import { UserReviewRepository } from './repositories/user-review.repository';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly fieldReviewRepository: FieldReviewRepository,
+    private readonly userReviewRepository: UserReviewRepository,
+  ) {}
 
   async reviewField(
     bookingId: string,
@@ -42,10 +46,7 @@ export class ReviewsService {
   ): Promise<FieldReviewCreatedResponseDto> {
     try {
       return await this.dataSource.transaction(async (manager) => {
-        await manager.query(
-          'SELECT pg_advisory_xact_lock(hashtext($1))',
-          [`field-review:${bookingId}`],
-        );
+        await this.lock(manager, `field-review:${bookingId}`);
         const booking = await manager.getRepository(BookingEntity).findOne({
           where: { id: bookingId, userId: reviewerId },
         });
@@ -60,21 +61,15 @@ export class ReviewsService {
         });
         if (!field) throw new NotFoundException('Field not found');
 
-        const review = await manager.getRepository(FieldReviewEntity).save(
-          manager.getRepository(FieldReviewEntity).create({
-            fieldId: field.id,
-            reviewerId,
-            bookingId: booking.id,
-            rating: dto.rating,
-            comment: dto.comment?.trim() || null,
-            isFlagged: false,
-          }),
-        );
-        const summary = await this.updateFieldSummary(
-          manager,
-          field.id,
-          field.district,
-        );
+        const review = await this.fieldReviewRepository.create(manager, {
+          fieldId: field.id,
+          reviewerId,
+          bookingId: booking.id,
+          rating: dto.rating,
+          comment: dto.comment?.trim() || null,
+          isFlagged: false,
+        });
+        const summary = await this.updateFieldSummary(manager, field.id);
         return { review: this.toFieldReview(review), summary };
       });
     } catch (error: unknown) {
@@ -96,9 +91,9 @@ export class ReviewsService {
     }
     try {
       return await this.dataSource.transaction(async (manager) => {
-        await manager.query(
-          'SELECT pg_advisory_xact_lock(hashtext($1))',
-          [`user-review:${postId}:${targetUserId}:${reviewerId}`],
+        await this.lock(
+          manager,
+          `user-review:${postId}:${targetUserId}:${reviewerId}`,
         );
         const [post, targetUser] = await Promise.all([
           manager.getRepository(PostEntity).findOne({ where: { id: postId } }),
@@ -133,16 +128,14 @@ export class ReviewsService {
           );
         }
 
-        const review = await manager.getRepository(UserReviewEntity).save(
-          manager.getRepository(UserReviewEntity).create({
-            targetUserId,
-            reviewerId,
-            postId,
-            rating: dto.rating,
-            comment: dto.comment?.trim() || null,
-            isFlagged: false,
-          }),
-        );
+        const review = await this.userReviewRepository.create(manager, {
+          targetUserId,
+          reviewerId,
+          postId,
+          rating: dto.rating,
+          comment: dto.comment?.trim() || null,
+          isFlagged: false,
+        });
         const summary = await this.updateUserSummary(manager, targetUserId);
         return { review: this.toUserReview(review), summary };
       });
@@ -164,19 +157,13 @@ export class ReviewsService {
       where: { id: fieldId },
     });
     if (!field) throw new NotFoundException('Field not found');
-    const [reviews, total, summary] = await Promise.all([
-      this.dataSource.getRepository(FieldReviewEntity).find({
-        where: { fieldId, isFlagged: false },
-        order: { createdAt: 'DESC' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.dataSource.getRepository(FieldReviewEntity).count({
-        where: { fieldId, isFlagged: false },
-      }),
-      this.dataSource.getRepository(FieldRatingSummaryEntity).findOne({
-        where: { fieldId },
-      }),
+    const [[reviews, total], summary] = await Promise.all([
+      this.fieldReviewRepository.findAndCountByFieldId(
+        fieldId,
+        (query.page - 1) * query.limit,
+        query.limit,
+      ),
+      this.fieldReviewRepository.findSummary(fieldId),
     ]);
     return {
       items: reviews.map((review) => this.toFieldReview(review)),
@@ -202,19 +189,13 @@ export class ReviewsService {
       where: { id: userId },
     });
     if (!user) throw new NotFoundException('User not found');
-    const [reviews, total, summary] = await Promise.all([
-      this.dataSource.getRepository(UserReviewEntity).find({
-        where: { targetUserId: userId, isFlagged: false },
-        order: { createdAt: 'DESC' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.dataSource.getRepository(UserReviewEntity).count({
-        where: { targetUserId: userId, isFlagged: false },
-      }),
-      this.dataSource.getRepository(UserRatingSummaryEntity).findOne({
-        where: { userId },
-      }),
+    const [[reviews, total], summary] = await Promise.all([
+      this.userReviewRepository.findAndCountByUserId(
+        userId,
+        (query.page - 1) * query.limit,
+        query.limit,
+      ),
+      this.userReviewRepository.findSummary(userId),
     ]);
     return {
       items: reviews.map((review) => this.toUserReview(review)),
@@ -234,39 +215,24 @@ export class ReviewsService {
   private async updateFieldSummary(
     manager: EntityManager,
     fieldId: string,
-    district: string,
   ): Promise<RatingSummaryResponseDto> {
-    await manager.query(
-      'SELECT pg_advisory_xact_lock(hashtext($1))',
-      [`field-summary:${fieldId}`],
-    );
-    const [fieldStats] = (await manager.query(
-      `SELECT COUNT(*)::int AS count, COALESCE(AVG(rating), 0)::float AS average
-       FROM field_reviews WHERE field_id = $1 AND is_flagged = false`,
-      [fieldId],
-    )) as Array<{ count: number; average: number }>;
-    const [globalStats] = (await manager.query(
-      `SELECT COALESCE(AVG(rating), 3)::float AS average
-       FROM field_reviews WHERE is_flagged = false`,
-    )) as Array<{ average: number }>;
+    await this.lock(manager, `field-summary:${fieldId}`);
+    const [fieldStats, globalAverage] = await Promise.all([
+      this.fieldReviewRepository.getStats(manager, fieldId),
+      this.fieldReviewRepository.getGlobalAverage(manager),
+    ]);
     const count = Number(fieldStats.count);
     const average = Number(fieldStats.average);
-    const globalAverage = Number(globalStats.average);
     const minimumReviews = 5;
     const bayesian =
       (count / (count + minimumReviews)) * average +
       (minimumReviews / (count + minimumReviews)) * globalAverage;
-    await manager.query(
-      `INSERT INTO field_rating_summary
-        (field_id, avg_rating, total_reviews, bayesian_score, district, updated_at)
-       VALUES ($1, $2, $3, $4, $5, now())
-       ON CONFLICT (field_id) DO UPDATE SET
-        avg_rating = EXCLUDED.avg_rating,
-        total_reviews = EXCLUDED.total_reviews,
-        bayesian_score = EXCLUDED.bayesian_score,
-        district = EXCLUDED.district,
-        updated_at = now()`,
-      [fieldId, average.toFixed(2), count, bayesian.toFixed(4), district],
+    await this.fieldReviewRepository.upsertSummary(
+      manager,
+      fieldId,
+      average.toFixed(2),
+      count,
+      bayesian.toFixed(4),
     );
     return {
       averageRating: Number(average.toFixed(2)),
@@ -279,26 +245,15 @@ export class ReviewsService {
     manager: EntityManager,
     userId: string,
   ): Promise<RatingSummaryResponseDto> {
-    await manager.query(
-      'SELECT pg_advisory_xact_lock(hashtext($1))',
-      [`user-summary:${userId}`],
-    );
-    const [stats] = (await manager.query(
-      `SELECT COUNT(*)::int AS count, COALESCE(AVG(rating), 0)::float AS average
-       FROM user_reviews WHERE target_user_id = $1 AND is_flagged = false`,
-      [userId],
-    )) as Array<{ count: number; average: number }>;
+    await this.lock(manager, `user-summary:${userId}`);
+    const stats = await this.userReviewRepository.getStats(manager, userId);
     const count = Number(stats.count);
     const average = Number(stats.average);
-    await manager.query(
-      `INSERT INTO user_rating_summary
-        (user_id, avg_rating, total_reviews, updated_at)
-       VALUES ($1, $2, $3, now())
-       ON CONFLICT (user_id) DO UPDATE SET
-        avg_rating = EXCLUDED.avg_rating,
-        total_reviews = EXCLUDED.total_reviews,
-        updated_at = now()`,
-      [userId, average.toFixed(2), count],
+    await this.userReviewRepository.upsertSummary(
+      manager,
+      userId,
+      average.toFixed(2),
+      count,
     );
     return {
       averageRating: Number(average.toFixed(2)),
@@ -339,5 +294,9 @@ export class ReviewsService {
       'code' in error &&
       (error as { code: string }).code === '23505'
     );
+  }
+
+  private lock(manager: EntityManager, key: string): Promise<unknown> {
+    return manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
   }
 }

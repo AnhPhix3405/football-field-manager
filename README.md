@@ -34,13 +34,13 @@ docker compose down
 
 Copy `.env.example` to `.env` if it exists, or use the provided `.env`. Key variables:
 
-| Variable | Description | Default |
-| --- | --- | --- |
-| `DB_HOST` | Database host | `localhost` |
-| `DB_PORT` | Database port | `5433` |
-| `DB_USERNAME` | Database user | `admin` |
-| `DB_PASSWORD` | Database password | `123456` |
-| `DB_DATABASE` | Database name | `football_db` |
+| Variable      | Description       | Default       |
+| ------------- | ----------------- | ------------- |
+| `DB_HOST`     | Database host     | `localhost`   |
+| `DB_PORT`     | Database port     | `5433`        |
+| `DB_USERNAME` | Database user     | `admin`       |
+| `DB_PASSWORD` | Database password | `123456`      |
+| `DB_DATABASE` | Database name     | `football_db` |
 
 ## 3. Install dependencies
 
@@ -68,3 +68,39 @@ pnpm run start:prod
 The API listens on **http://localhost:3000** (override with `PORT` in `.env`). All routes are prefixed with `/api/v1`.
 
 - Swagger docs: http://localhost:3000/api/v1/docs
+
+# Football Field Manager
+
+## Database migrations
+
+Migration files use `timestamp-kebab-case.ts`. For example:
+
+`1787900000000-add-field-capacity.ts`
+
+Create or generate a migration by supplying a kebab-case path:
+
+```powershell
+npm run migrate:create -- src/database/migrations/add-field-capacity
+npm run migrate:generate -- src/database/migrations/add-field-capacity
+npm run migrate:run
+```
+
+## Module database structure
+
+`src/database` contains only database configuration, the TypeORM registry, enums, and migrations. Entity files belong to the module that owns their domain, and all names use `kebab-case`.
+
+```text
+src/
+  database/
+    data-source.ts
+    database.enums.ts
+    orm.registry.ts
+    migrations/
+  modules/
+    fields/
+      entities/field.entity.ts
+      repositories/fields-read.repository.ts
+      fields.service.ts
+```
+
+Repositories own database access and QueryBuilder/SQL composition. Services own validation, transactions, and business rules; controllers only handle HTTP concerns. Add new entity and repository files to the relevant module, never to `src/database`.

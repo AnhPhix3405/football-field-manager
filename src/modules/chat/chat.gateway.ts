@@ -19,10 +19,7 @@ import type {
 } from '../auth/interfaces/jwt-payload.interface';
 import { getJwtPublicKey } from '../auth/utils/jwt-key.util';
 import { ChatService } from './chat.service';
-import {
-  ConversationEventDto,
-  SendMessageDto,
-} from './dto/chat.dto';
+import { ConversationEventDto, SendMessageDto } from './dto/chat.dto';
 
 type ChatSocket = Socket & {
   data: {
@@ -31,8 +28,7 @@ type ChatSocket = Socket & {
 };
 
 const allowedOrigins = (
-  process.env.CORS_ORIGIN ??
-  'http://localhost:5173,http://localhost:3001'
+  process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:3001'
 )
   .split(',')
   .map((origin) => origin.trim());
@@ -52,9 +48,7 @@ const allowedOrigins = (
     credentials: true,
   },
 })
-export class ChatGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Namespace;
 
@@ -79,9 +73,7 @@ export class ChatGateway
         payload.sub,
       );
       await Promise.all(
-        conversationIds.map((id) =>
-          client.join(this.conversationRoom(id)),
-        ),
+        conversationIds.map((id) => client.join(this.conversationRoom(id))),
       );
     } catch (error: unknown) {
       client.emit('auth:error', {

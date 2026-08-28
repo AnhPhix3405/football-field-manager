@@ -1,8 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import {
-  ConversationType,
-  MessageType,
-} from '../../../database/entities';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ConversationType, MessageType } from '../../entity-registry';
 
 export class MessageResponseDto {
   @ApiProperty({ format: 'uuid' })
@@ -14,14 +11,11 @@ export class MessageResponseDto {
   @ApiProperty({ format: 'uuid' })
   senderId: string;
 
-  @ApiProperty()
-  content: string;
+  @ApiPropertyOptional({ nullable: true })
+  content: string | null;
 
   @ApiProperty({ enum: MessageType })
   messageType: MessageType;
-
-  @ApiProperty()
-  isRead: boolean;
 
   @ApiProperty()
   createdAt: Date;

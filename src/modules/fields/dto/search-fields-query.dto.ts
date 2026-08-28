@@ -50,15 +50,22 @@ export class SearchFieldsQueryDto {
   maxPrice?: number;
 
   @ApiPropertyOptional({
-    description: 'Comma-separated service names; all requested services must exist.',
+    description:
+      'Comma-separated service names; all requested services must exist.',
     example: 'parking,shower',
     type: [String],
   })
   @IsOptional()
   @Transform(({ value }: { value: unknown }) =>
     Array.isArray(value)
-      ? value.map(String).map((item) => item.trim()).filter(Boolean)
-      : String(value).split(',').map((item) => item.trim()).filter(Boolean),
+      ? value
+          .map(String)
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : String(value)
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean),
   )
   @IsArray()
   @IsString({ each: true })

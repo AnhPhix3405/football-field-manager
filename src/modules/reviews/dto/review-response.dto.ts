@@ -3,7 +3,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export class RatingSummaryResponseDto {
   @ApiProperty() averageRating: number;
   @ApiProperty() totalReviews: number;
-  @ApiPropertyOptional({ description: 'Bayesian ranking score used for fields.' })
+  @ApiPropertyOptional({
+    description: 'Bayesian ranking score used for fields.',
+  })
   bayesianScore?: number;
 }
 
@@ -31,17 +33,21 @@ export class UserReviewResponseDto {
 
 export class FieldReviewCreatedResponseDto {
   @ApiProperty({ type: FieldReviewResponseDto }) review: FieldReviewResponseDto;
-  @ApiProperty({ type: RatingSummaryResponseDto }) summary: RatingSummaryResponseDto;
+  @ApiProperty({ type: RatingSummaryResponseDto })
+  summary: RatingSummaryResponseDto;
 }
 
 export class UserReviewCreatedResponseDto {
   @ApiProperty({ type: UserReviewResponseDto }) review: UserReviewResponseDto;
-  @ApiProperty({ type: RatingSummaryResponseDto }) summary: RatingSummaryResponseDto;
+  @ApiProperty({ type: RatingSummaryResponseDto })
+  summary: RatingSummaryResponseDto;
 }
 
 export class PaginatedFieldReviewsResponseDto {
-  @ApiProperty({ type: [FieldReviewResponseDto] }) items: FieldReviewResponseDto[];
-  @ApiProperty({ type: RatingSummaryResponseDto }) summary: RatingSummaryResponseDto;
+  @ApiProperty({ type: [FieldReviewResponseDto] })
+  items: FieldReviewResponseDto[];
+  @ApiProperty({ type: RatingSummaryResponseDto })
+  summary: RatingSummaryResponseDto;
   @ApiProperty() total: number;
   @ApiProperty() page: number;
   @ApiProperty() limit: number;
@@ -49,8 +55,10 @@ export class PaginatedFieldReviewsResponseDto {
 }
 
 export class PaginatedUserReviewsResponseDto {
-  @ApiProperty({ type: [UserReviewResponseDto] }) items: UserReviewResponseDto[];
-  @ApiProperty({ type: RatingSummaryResponseDto }) summary: RatingSummaryResponseDto;
+  @ApiProperty({ type: [UserReviewResponseDto] })
+  items: UserReviewResponseDto[];
+  @ApiProperty({ type: RatingSummaryResponseDto })
+  summary: RatingSummaryResponseDto;
   @ApiProperty() total: number;
   @ApiProperty() page: number;
   @ApiProperty() limit: number;
